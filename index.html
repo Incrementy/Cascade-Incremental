@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  />
+  <title>Greek Alphabet Incremental</title>
+  <style>
+    :root {
+      --bg: #111111;
+      --panel: #151515;     /* close to bg */
+      --panel-2: #161616;   /* close to bg */
+      --border: #1f1f1f;    /* subtle */
+      --fg: #e6e6e6;
+      --muted: #b8b8b8;
+      --accent: #8fff8f;
+      --btn: #1c1c1c;
+      --btn-hover: #222222;
+      --btn-border: #2a2a2a;
+      --btn-border-hover: #333333;
+      --btn-active: #323232;        /* lighter (more visible) */
+      --btn-active-border: #454545; /* lighter (more visible) */
+      --btn-disabled: #171717;
+      --btn-disabled-border: #1f1f1f;
+    }
+
+    html, body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans,
+        "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
+      margin: 0;
+      padding: 0;
+      min-height: 100%;
+    }
+
+    #game {
+      width: min(960px, 95vw);
+      margin: 18px auto 48px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 10px 12px;
+    }
+
+    #top {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    #pointsRow {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    #pointsRow h1 {
+      font-size: 1.2rem;
+      margin: 0;
+      font-weight: 700;
+    }
+
+    #rate {
+      color: var(--accent);
+      font-weight: 600;
+      white-space: nowrap;
+      font-size: 0.95rem;
+    }
+
+    #levelRow {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 0.95rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    #controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      background: var(--panel-2);
+    }
+
+    .control-button {
+      padding: 5px 10px;
+      background: var(--btn);
+      color: var(--fg);
+      border: 1px solid var(--btn-border);
+      border-radius: 3px;
+      cursor: pointer;
+      transition: background-color .1s, border-color .1s, transform .02s;
+      user-select: none;
+      font-size: 0.95rem;
+    }
+    .control-button:hover { background: var(--btn-hover); border-color: var(--btn-border-hover); }
+    .control-button.active { background: var(--btn-active); border-color: var(--btn-active-border); box-shadow: inset 0 0 0 1px #545454; }
+    .control-button:active { transform: translateY(1px); }
+
+    #layers {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    .layer {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px 12px;
+      align-items: center;
+    }
+
+    .layer .head {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+    }
+
+    .layer .name {
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+
+    .layer .amount {
+      font-size: 0.98rem;
+      color: var(--fg);
+    }
+
+    .layer .hint {
+      grid-column: 1 / -1;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .buy {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .buy .cost {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .buy .button {
+      padding: 9px 12px;
+      background: var(--btn);
+      color: var(--fg);
+      border: 1px solid var(--btn-border);
+      border-radius: 3px;
+      /* keep cursor consistent even when disabled */
+      cursor: default;
+      transition: background-color .1s, border-color .1s, transform .02s;
+      user-select: none;
+      min-width: 160px;
+      text-align: center;
+      font-size: 0.95rem;
+    }
+    .buy .button:hover:not([disabled]) { background: var(--btn-hover); border-color: var(--btn-border-hover); }
+    .buy .button:active:not([disabled]) { transform: translateY(1px); }
+    .buy .button[disabled] {
+      background: var(--btn-disabled);
+      border-color: var(--btn-disabled-border);
+      color: #777;
+      cursor: default;
+    }
+
+    @media (min-width: 720px) {
+      #top { grid-template-columns: 1fr auto; }
+      .layer { grid-template-columns: 1fr auto; }
+    }
+  </style>
+</head>
+<body>
+  <div id="game">
+    <div id="top">
+      <div id="pointsCard" class="card">
+        <div id="pointsRow">
+          <h1>Points: <span id="points">0</span></h1>
+          <div id="rate">(+1/s)</div>
+        </div>
+        <div id="levelRow">
+          <div>Level: <span id="level">0.00</span></div>
+          <div></div>
+        </div>
+      </div>
+
+      <div id="controls" class="card" aria-label="Buy amount controls">
+        <span>Buy amount:</span>
+        <button class="control-button active" data-buy="1">1x</button>
+        <button class="control-button" data-buy="10">10x</button>
+        <button class="control-button" data-buy="100">100x</button>
+        <button class="control-button" data-buy="max">Max</button>
+      </div>
+    </div>
+
+    <div id="layers"></div>
+  </div>
+
+  <script>
+    (() => {
+      'use strict';
+
+      // ========= Config =========
+      const NAMES = [
+        'Alpha', 'Beta', 'Gamma', 'Delta', 'Epsilon', 'Zeta', 'Eta', 'Theta',
+        'Iota', 'Kappa', 'Lambda', 'Mu', 'Nu', 'Xi', 'Omicron', 'Pi', 'Rho',
+        'Sigma', 'Tau', 'Upsilon', 'Phi', 'Chi', 'Psi', 'Omega'
+      ];
+      const SUFFIX = [
+        'k','m','b','t',
+        'qa','qi','sx','sp','oc','no',
+        'dc','ud','dd','td','qad','qid','sxd','spd','ocd','nod',
+        'vg','uvg','dvg','tvg','qavg','qivg','sxvg','spvg','ocvg','novg',
+        'ct','uct','dct','tct','qact','qict','sxc','spc','occ','noc'
+      ];
+      // precompute sqrt(i+1)
+      const LCONST = NAMES.map((_, i) => ({ a: Math.sqrt(i + 1), ap1: Math.sqrt(i + 1) + 1 }));
+
+      // ========= EN engine (log10 magnitude) =========
+      class EN {
+        constructor(e) { this.e = e; } // value = 10^e; zero => -Infinity
+        static zero() { return new EN(-Infinity); }
+        static one() { return new EN(0); }
+        static fromNumber(n) { return (n > 0) ? new EN(Math.log10(n)) : EN.zero(); }
+        static fromInt(n) { return (n > 0) ? new EN(Math.log10(n)) : EN.zero(); }
+        static pow10(x) { return new EN(x); }
+        clone(){ return new EN(this.e); }
+        isZero(){ return this.e === -Infinity; }
+        static cmp(a,b){ return a.e===b.e?0:(a.e>b.e?1:-1); }
+        static lt(a,b){ return EN.cmp(a,b)<0; }
+        static lte(a,b){ return EN.cmp(a,b)<=0; }
+        static gt(a,b){ return EN.cmp(a,b)>0; }
+        static gte(a,b){ return EN.cmp(a,b)>=0; }
+        static add(a,b){
+          if (a.isZero()) return b.clone();
+          if (b.isZero()) return a.clone();
+          const mx = Math.max(a.e,b.e), mn = Math.min(a.e,b.e);
+          const diff = mx - mn;
+          if (diff > 12) return new EN(mx);
+          const addLog = Math.log10(1 + Math.pow(10, -diff));
+          return new EN(mx + addLog);
+        }
+        static sub(a,b){
+          if (b.isZero()) return a.clone();
+          if (a.isZero() || EN.lte(a,b)) return EN.zero();
+          const diff = a.e - b.e;
+          if (diff > 12) return new EN(a.e);
+          const subLog = Math.log10(1 - Math.pow(10, -diff));
+          return new EN(a.e + subLog);
+        }
+        static mul(a,b){ return (a.isZero()||b.isZero()) ? EN.zero() : new EN(a.e + b.e); }
+        static div(a,b){
+          if (a.isZero()) return EN.zero();
+          if (b.isZero()) return new EN(Infinity);
+          return new EN(a.e - b.e);
+        }
+        static pow(a,p){
+          if (a.isZero()) return EN.zero();
+          if (p===0) return EN.one();
+          return new EN(a.e * p);
+        }
+        toNumberSafe(){
+          if (!isFinite(this.e) || Math.abs(this.e) > 15) return null;
+          return Math.pow(10, this.e);
+        }
+      }
+      function floorEN(x){
+        if (x.isZero()) return EN.zero();
+        const e = x.e;
+        if (e < 0) return EN.zero();
+        if (e < 15) return EN.fromNumber(Math.floor(Math.pow(10, e)));
+        return x.clone();
+      }
+      function formatEN(x) {
+        x = floorEN(x);
+        if (x.isZero()) return '0';
+        const e = x.e;
+        if (e < 3 && e > -3) {
+          const n = x.toNumberSafe();
+          if (n !== null) return Math.floor(n).toLocaleString();
+        }
+        if (e >= 3 && e < 100) {
+          const tier = Math.floor(e / 3);
+          const suf = SUFFIX[tier - 1];
+          if (suf) {
+            const mant = Math.pow(10, e - tier * 3);
+            let s = mant.toPrecision(3);
+            s = s.replace(/(\.\d*?[1-9])0+$/,'$1').replace(/\.0+$/,'');
+            return s + suf;
+          }
+        }
+        const expo = Math.floor(e);
+        const frac = e - expo;
+        let m = Math.pow(10, frac).toPrecision(3).replace(/(\.\d*?[1-9])0+$/,'$1').replace(/\.0+$/,'');
+        return m + 'e' + expo;
+      }
+      function formatLevelEN(x) {
+        if (x.isZero()) return '0.00';
+        const e = x.e;
+        if (e < 6 && e > -6) {
+          const n = x.toNumberSafe();
+          if (n !== null) return Number(n.toPrecision(3)).toString();
+        }
+        const expo = Math.floor(e);
+        const frac = e - expo;
+        let m = Math.pow(10, frac).toPrecision(3).replace(/(\.\d*?[1-9])0+$/,'$1').replace(/\.0+$/,'');
+        return m + 'e' + expo;
+      }
+
+      // ========= Game state =========
+      const game = {
+        points: EN.zero(),                         // integer-external
+        layers: NAMES.map(n => ({ name: n, amount: EN.zero(), bought: EN.zero() })),
+        buyMode: 1,                                // 1 | 10 | 100 | 'max'
+        residualPoints: 0                          // carry fractional gains to next frames
+      };
+
+      // ========= DOM =========
+      const pointsEl = document.getElementById('points');
+      const rateEl = document.getElementById('rate');
+      const levelEl = document.getElementById('level');
+      const layersEl = document.getElementById('layers');
+      const controlsEl = document.getElementById('controls');
+
+      // ========= Mechanics =========
+      // Cost per next: (bought + 3)^(sqrt(i+1))
+      function singleCostEN(layerIndex, boughtEN) {
+        // log10(k) where k = bought + 3 (exact EN add)
+        const kEN = EN.add(boughtEN, EN.fromInt(3));
+        return EN.pow10(LCONST[layerIndex].a * kEN.e);
+      }
+      // Exact total (n <= 100) by summing
+      function exactTotalCostEN(layerIndex, n, boughtEN) {
+        if (n <= 0) return EN.zero();
+        let sum = EN.zero();
+        for (let i = 0; i < n; i++) {
+          const bStep = EN.add(boughtEN, EN.fromInt(i));
+          sum = EN.add(sum, singleCostEN(layerIndex, bStep));
+        }
+        return sum;
+      }
+      // Upper integral: U(n) = ((k1+n)^(a+1) - k1^(a+1)) / (a+1) with k1 = bought+3
+      function integralUpperCostEN(layerIndex, n, boughtEN) {
+        if (n <= 0) return EN.zero();
+        const { a, ap1 } = LCONST[layerIndex];
+        const k1e = EN.add(boughtEN, EN.fromInt(3)).e;          // log10(k1)
+        const k2e = EN.add(boughtEN, EN.fromInt(3 + n)).e;      // log10(k1+n)
+        const num = EN.sub(EN.pow10((a+1)*k2e), EN.pow10((a+1)*k1e));
+        return EN.div(num, EN.fromNumber(ap1));
+      }
+      // Invert U(n) to get a fast, safe estimate (no overspend when we check with U)
+      function estimateNFromCurrencyUpper(layerIndex, currencyEN, boughtEN) {
+        if (currencyEN.isZero()) return 0;
+        const { a } = LCONST[layerIndex];
+        const ap1 = a + 1;
+        const k1e = EN.add(boughtEN, EN.fromInt(3)).e;
+        // (k2^(a+1)) = (a+1)*C + k1^(a+1)
+        const rhs = EN.add(EN.mul(currencyEN, EN.fromNumber(ap1)), EN.pow10((a+1)*k1e));
+        const k2e = rhs.e / (a+1);
+        const diff = k2e - k1e;
+        if (diff <= 0) return 0;
+        // n ≈ k1 * (10^diff - 1); cap result for UI stability
+        if (diff > 15) return 1e15 | 0;
+        const k1 = Math.pow(10, k1e);
+        const n = k1 * (Math.pow(10, diff) - 1);
+        if (!isFinite(n) || n < 0) return 0;
+        return Math.floor(n);
+      }
+
+      // Currency available (spend integers)
+      function currencyEN(layerIndex) {
+        if (layerIndex === 0) return floorEN(game.points);
+        return floorEN(game.layers[layerIndex - 1].amount);
+      }
+      // Purchase gain multiplier = max(1, next.amount)
+      function purchaseGainMultiplierEN(layerIndex) {
+        const next = game.layers[layerIndex + 1];
+        if (!next) return EN.one();
+        const intNext = floorEN(next.amount);
+        return EN.lt(intNext, EN.one()) ? EN.one() : intNext;
+      }
+      // Points per second = max(1, alpha)
+      function pointsPerSecondEN() {
+        const alpha = floorEN(game.layers[0].amount);
+        return EN.lt(alpha, EN.one()) ? EN.one() : alpha;
+      }
+      // Level = sum n^(n^(1/3)) * ln(amount*10) over layers with amount>=1
+      const LN10 = Math.log(10);
+      function computeLevelEN() {
+        let total = EN.zero();
+        for (let i = 0; i < game.layers.length; i++) {
+          const amtInt = floorEN(game.layers[i].amount);
+          if (EN.lt(amtInt, EN.one())) continue;
+          const n = i + 1;
+          const factor = Math.pow(n, Math.pow(n, 1/3));
+          const lnPart = (amtInt.e + 1) * LN10;
+          if (lnPart <= 0 || !isFinite(lnPart) || !isFinite(factor)) continue;
+          total = EN.add(total, EN.pow10(Math.log10(factor) + Math.log10(lnPart)));
+        }
+        return total;
+      }
+
+      // ========= UI build =========
+      function buildUI() {
+        layersEl.innerHTML = '';
+        NAMES.forEach((name, i) => {
+          const card = document.createElement('div');
+          card.className = 'card layer';
+          card.id = `layer-${i}`;
+
+          const head = document.createElement('div');
+          head.className = 'head';
+          const title = document.createElement('div');
+          title.className = 'name';
+          title.textContent = name;
+          const amt = document.createElement('div');
+          amt.className = 'amount';
+          amt.id = `amount-${i}`;
+          head.appendChild(title);
+          head.appendChild(amt);
+
+          const hint = document.createElement('div');
+          hint.className = 'hint';
+          hint.id = `hint-${i}`;
+          card.appendChild(head);
+          card.appendChild(hint);
+
+          const buyRow = document.createElement('div');
+          buyRow.className = 'buy';
+          const cost = document.createElement('div');
+          cost.className = 'cost';
+          cost.id = `cost-${i}`;
+          const btn = document.createElement('button');
+          btn.className = 'button';
+          btn.id = `buy-${i}`;
+          btn.textContent = `Buy`;
+          btn.addEventListener('click', () => buy(i));
+          buyRow.appendChild(cost);
+          buyRow.appendChild(btn);
+          card.appendChild(buyRow);
+
+          layersEl.appendChild(card);
+        });
+      }
+
+      // ========= Lightweight, throttled UI updates =========
+      function updatePointsAndRateUI() {
+        pointsEl.textContent = formatEN(game.points);
+        rateEl.textContent = `(+${formatEN(pointsPerSecondEN())}/s)`;
+      }
+      function updateLayerRow(i) {
+        const layer = game.layers[i];
+        const amtEl = document.getElementById(`amount-${i}`);
+        const costEl = document.getElementById(`cost-${i}`);
+        const btnEl = document.getElementById(`buy-${i}`);
+        const hintEl = document.getElementById(`hint-${i}`);
+
+        const mult = purchaseGainMultiplierEN(i);
+        const prevName = (i === 0) ? 'points' : game.layers[i - 1].name.toLowerCase();
+
+        // Amount display (integer)
+        amtEl.textContent = `Amount: ${formatEN(layer.amount)}`;
+        hintEl.textContent = `Each ${layer.name.toLowerCase()} purchase is multiplied by ${NAMES[i + 1] ? NAMES[i + 1].toLowerCase() : '1'} (x${formatEN(mult)}).`;
+
+        const cur = currencyEN(i);
+        const b = layer.bought;
+
+        if (game.buyMode === 1 || game.buyMode === 10 || game.buyMode === 100) {
+          const desired = game.buyMode;
+          // EXACT and cheap (<=100 terms)
+          const totalCost = exactTotalCostEN(i, desired, b);
+          costEl.textContent = `Cost: ${formatEN(totalCost)} ${prevName}`;
+          btnEl.textContent = `Buy ${formatEN(EN.fromInt(desired))}`;
+          btnEl.disabled = !EN.gte(cur, totalCost);
+        } else {
+          // MAX mode: SUPERFICIAL every 0.2s
+          const costOne = singleCostEN(i, b);
+          const canAffordOne = EN.gte(cur, costOne);
+
+          // Estimate n via upper integral (safe)
+          let nEst = estimateNFromCurrencyUpper(i, cur, b);
+          if (nEst < 1 && canAffordOne) nEst = 1;
+
+          // Show U(nEst) as cost (superficial)
+          const shownCost = (nEst > 100)
+            ? integralUpperCostEN(i, nEst, b)
+            : (nEst > 0 ? exactTotalCostEN(i, nEst, b) : costOne);
+
+          costEl.textContent = `Cost: ${formatEN(shownCost)} ${prevName}`;
+          btnEl.textContent = `Buy ${formatEN(EN.fromInt(Math.max(1, nEst)))}`;
+          // Only disable if can't afford even 1
+          btnEl.disabled = !canAffordOne;
+        }
+      }
+      function updateAllLayerRows() {
+        for (let i = 0; i < game.layers.length; i++) updateLayerRow(i);
+      }
+
+      // ========= Purchasing (exact <=100, integral upper for >100; no binary search) =========
+      function buy(layerIndex) {
+        const layer = game.layers[layerIndex];
+        const cur = currencyEN(layerIndex);
+        const b = layer.bought;
+
+        if (game.buyMode === 1 || game.buyMode === 10 || game.buyMode === 100) {
+          const desired = game.buyMode;
+          const totalCost = exactTotalCostEN(layerIndex, desired, b);
+          if (!EN.gte(cur, totalCost)) return; // exact only
+          performPurchase(layerIndex, desired, totalCost);
+          return;
+        }
+
+        // Max mode:
+        // Step 1: estimate n via upper integral (safe)
+        let n = estimateNFromCurrencyUpper(layerIndex, cur, b);
+        if (n < 0) n = 0;
+
+        // Step 2: compute U(n) (safe upper bound of real sum)
+        let spentUpper = integralUpperCostEN(layerIndex, n, b);
+        // Ensure we never overspend: if U(n) > currency, reduce n quickly
+        // (rare due to flooring and estimation; adjust in chunks)
+        let guard = 0;
+        while (EN.gt(spentUpper, cur) && n > 0 && guard < 10) {
+          n = Math.floor(n * 0.8);
+          spentUpper = integralUpperCostEN(layerIndex, n, b);
+          guard++;
+        }
+
+        // Step 3: exact top-off up to +100 (still safe using U(n)+nextCost <= currency)
+        let extra = 0;
+        for (; extra < 100; extra++) {
+          const nextCost = singleCostEN(layerIndex, EN.add(b, EN.fromInt(n + extra)));
+          const trial = EN.add(spentUpper, nextCost);
+          if (EN.lte(trial, cur)) spentUpper = trial; else break;
+        }
+        const totalToBuy = n + extra;
+        if (totalToBuy <= 0) return;
+
+        performPurchase(layerIndex, totalToBuy, spentUpper);
+      }
+      function performPurchase(layerIndex, countInt, totalCostEN) {
+        // Deduct
+        if (layerIndex === 0) {
+          game.points = EN.sub(game.points, totalCostEN);
+        } else {
+          const prev = game.layers[layerIndex - 1];
+          prev.amount = EN.sub(prev.amount, totalCostEN);
+        }
+
+        // Apply gains (integers): bought += count, amount += count * multiplier
+        const layer = game.layers[layerIndex];
+        const mult = purchaseGainMultiplierEN(layerIndex);
+        layer.bought = EN.add(layer.bought, EN.fromInt(countInt));
+        layer.amount = EN.add(layer.amount, EN.mul(EN.fromInt(countInt), mult));
+
+        // Immediate UI refresh for affected rows
+        updateLayerRow(layerIndex);
+        if (layerIndex > 0) updateLayerRow(layerIndex - 1);
+        if (layerIndex + 1 < game.layers.length) updateLayerRow(layerIndex + 1);
+        if (layerIndex === 0) updatePointsAndRateUI();
+        // Level may change
+        levelEl.textContent = formatLevelEN(computeLevelEN());
+        saveToCookieThrottled();
+      }
+
+      // ========= Controls =========
+      controlsEl.addEventListener('click', (e) => {
+        const btn = e.target.closest('.control-button');
+        if (!btn) return;
+        const mode = btn.getAttribute('data-buy');
+        game.buyMode = (mode === 'max') ? 'max' : parseInt(mode, 10);
+
+        controlsEl.querySelectorAll('.control-button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        // Refresh costs/buttons once; heavy stuff is throttled elsewhere
+        updateAllLayerRows();
+        saveToCookieThrottled();
+      });
+
+      // ========= Saving with cookies =========
+      const COOKIE_NAME = 'greek_incremental_save';
+      const COOKIE_DAYS = 365;
+
+      function setCookie(name, value, days) {
+        const d = new Date();
+        d.setTime(d.getTime() + (days*24*60*60*1000));
+        const expires = "expires=" + d.toUTCString();
+        document.cookie = name + "=" + encodeURIComponent(value) + ";" + expires + ";path=/;SameSite=Lax";
+      }
+      function getCookie(name) {
+        const cname = name + "=";
+        const ca = document.cookie.split(';');
+        for (let c of ca) {
+          c = c.trim();
+          if (c.indexOf(cname) === 0) return decodeURIComponent(c.substring(cname.length));
+        }
+        return null;
+      }
+      function saveToCookie() {
+        const payload = {
+          p: game.points.e,
+          m: game.buyMode,
+          l: game.layers.map(L => [L.amount.e, L.bought.e])
+        };
+        try { setCookie(COOKIE_NAME, JSON.stringify(payload), COOKIE_DAYS); } catch {}
+      }
+      let saveThrottle = 0;
+      function saveToCookieThrottled() {
+        const now = performance.now();
+        if (now - saveThrottle > 3000) { saveThrottle = now; saveToCookie(); }
+      }
+      function loadFromCookie() {
+        const raw = getCookie(COOKIE_NAME);
+        if (!raw) return;
+        try {
+          const data = JSON.parse(raw);
+          if (typeof data.p === 'number') game.points = EN.pow10(data.p);
+          if (data.m === 'max' || data.m === 1 || data.m === 10 || data.m === 100) game.buyMode = data.m;
+          if (Array.isArray(data.l) && data.l.length === game.layers.length) {
+            for (let i = 0; i < game.layers.length; i++) {
+              const pair = data.l[i];
+              if (Array.isArray(pair) && pair.length === 2) {
+                const [amtE, boughtE] = pair;
+                if (typeof amtE === 'number') game.layers[i].amount = EN.pow10(amtE);
+                if (typeof boughtE === 'number') game.layers[i].bought = EN.pow10(boughtE);
+              }
+            }
+          }
+          // Reflect active button on load
+          controlsEl.querySelectorAll('.control-button').forEach(b => {
+            const mode = b.getAttribute('data-buy');
+            const m = (mode === 'max') ? 'max' : parseInt(mode,10);
+            if (m === game.buyMode) b.classList.add('active'); else b.classList.remove('active');
+          });
+        } catch {}
+      }
+      window.addEventListener('beforeunload', saveToCookie);
+
+      // ========= Game loop (buttery-smooth; no heavy work here) =========
+      let last = performance.now();
+      function frame(now) {
+        const dt = Math.max(0, Math.min(0.25, (now - last) / 1000)); // clamp dt
+        last = now;
+
+        // Produce points as integers (accumulate fractional gains)
+        const pps = pointsPerSecondEN();
+        const gainEN = EN.mul(pps, EN.fromNumber(dt));
+        if (gainEN.e < 0) {
+          const g = gainEN.toNumberSafe() ?? 0;
+          game.residualPoints += g;
+          if (game.residualPoints >= 1) {
+            const k = Math.floor(game.residualPoints);
+            game.residualPoints -= k;
+            game.points = EN.add(game.points, EN.fromInt(k));
+          }
+        } else {
+          const whole = floorEN(gainEN);
+          if (!whole.isZero()) game.points = EN.add(game.points, whole);
+        }
+
+        // Only cheap UI here (points + rate)
+        updatePointsAndRateUI();
+
+        requestAnimationFrame(frame);
+      }
+
+      // Throttled UI: "superficial" buy preview every 200ms
+      setInterval(() => {
+        // lightweight per-layer update (no binary search; integral-only for >100)
+        updateAllLayerRows();
+      }, 200);
+
+      // Level updates (can be a bit heavier); keep at 400ms
+      setInterval(() => {
+        levelEl.textContent = formatLevelEN(computeLevelEN());
+      }, 400);
+
+      // ========= Init =========
+      buildUI();
+      loadFromCookie();
+      updatePointsAndRateUI();
+      updateAllLayerRows();
+      levelEl.textContent = formatLevelEN(computeLevelEN());
+      requestAnimationFrame(frame);
+    })();
+  </script>
+</body>
+</html>
