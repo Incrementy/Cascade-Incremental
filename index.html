@@ -10,9 +10,9 @@
   <style>
     :root {
       --bg: #111111;
-      --panel: #151515;     /* close to bg */
-      --panel-2: #161616;   /* close to bg */
-      --border: #1f1f1f;    
+      --panel: #151515;
+      --panel-2: #161616;
+      --border: #1f1f1f;
       --fg: #e6e6e6;
       --muted: #b8b8b8;
       --accent: #8fff8f;
@@ -20,10 +20,13 @@
       --btn-hover: #222222;
       --btn-border: #2a2a2a;
       --btn-border-hover: #333333;
-      --btn-active: #323232;        /* lighter (more visible) */
-      --btn-active-border: #454545; /* lighter (more visible) */
+      --btn-active: #333333;
+      --btn-active-border: #505050;
       --btn-disabled: #171717;
       --btn-disabled-border: #1f1f1f;
+      --tab: #1a1a1a;
+      --tab-active: #202020;
+      --tab-border: #262626;
     }
 
     html, body {
@@ -37,7 +40,7 @@
     }
 
     #game {
-      width: min(960px, 95vw);
+      width: min(980px, 96vw);
       margin: 18px auto 48px;
     }
 
@@ -104,43 +107,53 @@
       font-size: 0.95rem;
     }
     .control-button:hover { background: var(--btn-hover); border-color: var(--btn-border-hover); }
-    .control-button.active { background: var(--btn-active); border-color: var(--btn-active-border); box-shadow: inset 0 0 0 1px #545454; }
+    .control-button.active { background: var(--btn-active); border-color: var(--btn-active-border); box-shadow: inset 0 0 0 1px #5c5c5c; }
     .control-button:active { transform: translateY(1px); }
 
-    #layers {
+    /* Tabs */
+    #tabs {
+      display: flex;
+      gap: 6px;
+      margin: 10px 0;
+    }
+    .tab {
+      background: var(--tab);
+      border: 1px solid var(--tab-border);
+      color: var(--fg);
+      padding: 6px 10px;
+      border-radius: 3px;
+      cursor: pointer;
+      user-select: none;
+      font-size: 0.95rem;
+    }
+    .tab.active {
+      background: var(--tab-active);
+      border-color: var(--btn-active-border);
+      box-shadow: inset 0 0 0 1px #4a4a4a;
+    }
+    .tab.disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+
+    #content { margin-top: 8px; }
+
+    /* Layers list */
+    .list {
       display: grid;
       grid-template-columns: 1fr;
       gap: 10px;
     }
-
     .layer {
       display: grid;
       grid-template-columns: 1fr auto;
       gap: 8px 12px;
       align-items: center;
     }
-
-    .layer .head {
-      display: flex;
-      align-items: baseline;
-      gap: 10px;
-    }
-
-    .layer .name {
-      font-size: 1.05rem;
-      font-weight: 700;
-    }
-
-    .layer .amount {
-      font-size: 0.98rem;
-      color: var(--fg);
-    }
-
-    .layer .hint {
-      grid-column: 1 / -1;
-      color: var(--muted);
-      font-size: 0.92rem;
-    }
+    .layer .head { display: flex; align-items: baseline; gap: 10px; }
+    .layer .name { font-size: 1.05rem; font-weight: 700; }
+    .layer .amount { font-size: 0.98rem; color: var(--fg); }
+    .layer .hint { grid-column: 1 / -1; color: var(--muted); font-size: 0.92rem; }
 
     .buy {
       grid-column: 1 / -1;
@@ -149,20 +162,14 @@
       gap: 10px;
       align-items: center;
     }
-
-    .buy .cost {
-      color: var(--muted);
-      font-size: 0.95rem;
-    }
-
+    .buy .cost { color: var(--muted); font-size: 0.95rem; }
     .buy .button {
       padding: 9px 12px;
       background: var(--btn);
       color: var(--fg);
       border: 1px solid var(--btn-border);
       border-radius: 3px;
-      /* keep cursor consistent even when disabled */
-      cursor: default;
+      cursor: default; /* keep cursor same even if disabled */
       transition: background-color .1s, border-color .1s, transform .02s;
       user-select: none;
       min-width: 160px;
@@ -182,6 +189,9 @@
       #top { grid-template-columns: 1fr auto; }
       .layer { grid-template-columns: 1fr auto; }
     }
+
+    /* Meta/Prestige cards slightly different background */
+    #metaTab .card, #prestigeTab .card { background: var(--panel-2); }
   </style>
 </head>
 <body>
@@ -194,7 +204,7 @@
         </div>
         <div id="levelRow">
           <div>Level: <span id="level">0.00</span></div>
-          <div></div>
+          <div id="metaPointsRow">Meta Points: <span id="metaPoints">0</span></div>
         </div>
       </div>
 
@@ -207,7 +217,32 @@
       </div>
     </div>
 
-    <div id="layers"></div>
+    <div id="tabs">
+      <div class="tab active" data-tab="layers">Layers</div>
+      <div class="tab disabled" data-tab="prestige">Prestige</div>
+      <div class="tab disabled" data-tab="meta">Meta-Layers</div>
+    </div>
+
+    <div id="content">
+      <div id="layersTab">
+        <div id="layers" class="list"></div>
+      </div>
+
+      <div id="prestigeTab" style="display:none;">
+        <div class="card" id="prestigeCard">
+          <h3 style="margin:0 0 8px;">Prestige</h3>
+          <div id="prestigeInfo" style="color:var(--muted); margin-bottom:8px;"></div>
+          <button id="prestigeBtn" class="control-button" style="margin-top:6px;">Prestige</button>
+          <div id="prestigeNote" style="color:var(--muted); margin-top:8px; font-size:0.92rem;">
+            Prestiging resets points and all normal layers (amount, bought, ever-owned), but keeps Meta Points and Meta-Layers.
+          </div>
+        </div>
+      </div>
+
+      <div id="metaTab" style="display:none;">
+        <div id="metaLayers" class="list"></div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -220,6 +255,13 @@
         'Iota', 'Kappa', 'Lambda', 'Mu', 'Nu', 'Xi', 'Omicron', 'Pi', 'Rho',
         'Sigma', 'Tau', 'Upsilon', 'Phi', 'Chi', 'Psi', 'Omega'
       ];
+
+      // Normal layer exponents: a = sqrt(i+1), ap1 = a+1
+      const LCONST = NAMES.map((_, i) => ({ a: Math.sqrt(i + 1), ap1: Math.sqrt(i + 1) + 1 }));
+      // Meta layer exponents: a = (i+1)^(1/3), ap1 = a+1
+      const MLCONST = NAMES.map((_, i) => { const a = Math.cbrt(i + 1); return { a, ap1: a + 1 }; });
+
+      // Abbrev suffix
       const SUFFIX = [
         'k','m','b','t',
         'qa','qi','sx','sp','oc','no',
@@ -227,10 +269,8 @@
         'vg','uvg','dvg','tvg','qavg','qivg','sxvg','spvg','ocvg','novg',
         'ct','uct','dct','tct','qact','qict','sxc','spc','occ','noc'
       ];
-      // precompute sqrt(i+1)
-      const LCONST = NAMES.map((_, i) => ({ a: Math.sqrt(i + 1), ap1: Math.sqrt(i + 1) + 1 }));
 
-      // ========= EN engine (log10 magnitude) =========
+      // ========= EN large number (log10 magnitude) =========
       class EN {
         constructor(e) { this.e = e; } // value = 10^e; zero => -Infinity
         static zero() { return new EN(-Infinity); }
@@ -240,11 +280,6 @@
         static pow10(x) { return new EN(x); }
         clone(){ return new EN(this.e); }
         isZero(){ return this.e === -Infinity; }
-        static cmp(a,b){ return a.e===b.e?0:(a.e>b.e?1:-1); }
-        static lt(a,b){ return EN.cmp(a,b)<0; }
-        static lte(a,b){ return EN.cmp(a,b)<=0; }
-        static gt(a,b){ return EN.cmp(a,b)>0; }
-        static gte(a,b){ return EN.cmp(a,b)>=0; }
         static add(a,b){
           if (a.isZero()) return b.clone();
           if (b.isZero()) return a.clone();
@@ -256,7 +291,8 @@
         }
         static sub(a,b){
           if (b.isZero()) return a.clone();
-          if (a.isZero() || EN.lte(a,b)) return EN.zero();
+          if (a.isZero()) return EN.zero();
+          if (a.e <= b.e) return EN.zero();
           const diff = a.e - b.e;
           if (diff > 12) return new EN(a.e);
           const subLog = Math.log10(1 - Math.pow(10, -diff));
@@ -278,6 +314,12 @@
           return Math.pow(10, this.e);
         }
       }
+      // Epsilon-safe compares to mitigate 0.99 rounding artifacts
+      const EXP_EPS = 1e-12;
+      const gteEps = (a,b) => (a.e >= b.e - EXP_EPS);
+      const lteEps = (a,b) => (a.e <= b.e + EXP_EPS);
+
+      // Floor to integer EN (keep huge values as-is)
       function floorEN(x){
         if (x.isZero()) return EN.zero();
         const e = x.e;
@@ -285,6 +327,8 @@
         if (e < 15) return EN.fromNumber(Math.floor(Math.pow(10, e)));
         return x.clone();
       }
+
+      // Format EN with 3 sig figs, integer display
       function formatEN(x) {
         x = floorEN(x);
         if (x.isZero()) return '0';
@@ -308,6 +352,7 @@
         let m = Math.pow(10, frac).toPrecision(3).replace(/(\.\d*?[1-9])0+$/,'$1').replace(/\.0+$/,'');
         return m + 'e' + expo;
       }
+      // Level format: 3 sig figs
       function formatLevelEN(x) {
         if (x.isZero()) return '0.00';
         const e = x.e;
@@ -323,99 +368,197 @@
 
       // ========= Game state =========
       const game = {
-        points: EN.zero(),                         // integer-external
-        layers: NAMES.map(n => ({ name: n, amount: EN.zero(), bought: EN.zero() })),
-        buyMode: 1,                                // 1 | 10 | 100 | 'max'
-        residualPoints: 0                          // carry fractional gains to next frames
+        points: EN.zero(),                // integer-external
+        metaPoints: EN.zero(),            // earned from prestige, integer-external
+        layers: NAMES.map(n => ({ name: n, amount: EN.zero(), bought: EN.zero(), ever: EN.zero() })),
+        metaLayers: NAMES.map(n => ({ name: n + '+', amount: EN.zero(), bought: EN.zero() })),
+        buyMode: 1,                       // 1 | 10 | 100 | 'max'
+        residualPoints: 0,                // fractional carry for smooth generation
+        softPointsVisual: 0,              // smooth visual counter (prevents "freeze" feel)
       };
 
       // ========= DOM =========
       const pointsEl = document.getElementById('points');
       const rateEl = document.getElementById('rate');
       const levelEl = document.getElementById('level');
+      const metaPointsEl = document.getElementById('metaPoints');
       const layersEl = document.getElementById('layers');
+      const metaLayersEl = document.getElementById('metaLayers');
       const controlsEl = document.getElementById('controls');
+      const tabsEl = document.getElementById('tabs');
+      const layersTabEl = document.getElementById('layersTab');
+      const prestigeTabEl = document.getElementById('prestigeTab');
+      const metaTabEl = document.getElementById('metaTab');
+      const prestigeInfoEl = document.getElementById('prestigeInfo');
+      const prestigeBtn = document.getElementById('prestigeBtn');
 
       // ========= Mechanics =========
-      // Cost per next: (bought + 3)^(sqrt(i+1))
+      // Costs
       function singleCostEN(layerIndex, boughtEN) {
-        // log10(k) where k = bought + 3 (exact EN add)
+        const { a } = LCONST[layerIndex];
         const kEN = EN.add(boughtEN, EN.fromInt(3));
-        return EN.pow10(LCONST[layerIndex].a * kEN.e);
+        return EN.pow10(a * kEN.e);
       }
-      // Exact total (n <= 100) by summing
+      function singleCostMetaEN(layerIndex, boughtEN) {
+        const { a } = MLCONST[layerIndex];
+        const kEN = EN.add(boughtEN, EN.fromInt(3));
+        return EN.pow10(a * kEN.e);
+      }
+      // Exact total (<=100)
       function exactTotalCostEN(layerIndex, n, boughtEN) {
         if (n <= 0) return EN.zero();
         let sum = EN.zero();
-        for (let i = 0; i < n; i++) {
-          const bStep = EN.add(boughtEN, EN.fromInt(i));
-          sum = EN.add(sum, singleCostEN(layerIndex, bStep));
-        }
+        for (let i = 0; i < n; i++) sum = EN.add(sum, singleCostEN(layerIndex, EN.add(boughtEN, EN.fromInt(i))));
         return sum;
       }
-      // Upper integral: U(n) = ((k1+n)^(a+1) - k1^(a+1)) / (a+1) with k1 = bought+3
+      function exactTotalCostMetaEN(layerIndex, n, boughtEN) {
+        if (n <= 0) return EN.zero();
+        let sum = EN.zero();
+        for (let i = 0; i < n; i++) sum = EN.add(sum, singleCostMetaEN(layerIndex, EN.add(boughtEN, EN.fromInt(i))));
+        return sum;
+      }
+      // Integral upper & lower for big n (normal)
       function integralUpperCostEN(layerIndex, n, boughtEN) {
         if (n <= 0) return EN.zero();
         const { a, ap1 } = LCONST[layerIndex];
-        const k1e = EN.add(boughtEN, EN.fromInt(3)).e;          // log10(k1)
-        const k2e = EN.add(boughtEN, EN.fromInt(3 + n)).e;      // log10(k1+n)
+        const k1e = EN.add(boughtEN, EN.fromInt(3)).e;
+        const k2e = EN.add(boughtEN, EN.fromInt(3 + n)).e;
         const num = EN.sub(EN.pow10((a+1)*k2e), EN.pow10((a+1)*k1e));
         return EN.div(num, EN.fromNumber(ap1));
       }
-      // Invert U(n) to get a fast, safe estimate (no overspend when we check with U)
+      function integralLowerCostEN(layerIndex, n, boughtEN) {
+        if (n <= 0) return EN.zero();
+        const { a, ap1 } = LCONST[layerIndex];
+        const k0e = EN.add(boughtEN, EN.fromInt(2)).e;
+        const k1e = EN.add(boughtEN, EN.fromInt(2 + n)).e;
+        const num = EN.sub(EN.pow10((a+1)*k1e), EN.pow10((a+1)*k0e));
+        return EN.div(num, EN.fromNumber(ap1));
+      }
+      function comboCostEN(layerIndex, n, boughtEN) {
+        if (n <= 0) return EN.zero();
+        if (n <= 100) return exactTotalCostEN(layerIndex, n, boughtEN);
+        const base = n - 100;
+        const lowerPart = integralLowerCostEN(layerIndex, base, boughtEN);
+        const exactTail = exactTotalCostEN(layerIndex, 100, EN.add(boughtEN, EN.fromInt(base)));
+        return EN.add(lowerPart, exactTail);
+      }
+      // Integral upper/lower for big n (meta)
+      function integralUpperCostMetaEN(layerIndex, n, boughtEN) {
+        if (n <= 0) return EN.zero();
+        const { a, ap1 } = MLCONST[layerIndex];
+        const k1e = EN.add(boughtEN, EN.fromInt(3)).e;
+        const k2e = EN.add(boughtEN, EN.fromInt(3 + n)).e;
+        const num = EN.sub(EN.pow10((a+1)*k2e), EN.pow10((a+1)*k1e));
+        return EN.div(num, EN.fromNumber(ap1));
+      }
+      function integralLowerCostMetaEN(layerIndex, n, boughtEN) {
+        if (n <= 0) return EN.zero();
+        const { a, ap1 } = MLCONST[layerIndex];
+        const k0e = EN.add(boughtEN, EN.fromInt(2)).e;
+        const k1e = EN.add(boughtEN, EN.fromInt(2 + n)).e;
+        const num = EN.sub(EN.pow10((a+1)*k1e), EN.pow10((a+1)*k0e));
+        return EN.div(num, EN.fromNumber(ap1));
+      }
+      function comboCostMetaEN(layerIndex, n, boughtEN) {
+        if (n <= 0) return EN.zero();
+        if (n <= 100) return exactTotalCostMetaEN(layerIndex, n, boughtEN);
+        const base = n - 100;
+        const lowerPart = integralLowerCostMetaEN(layerIndex, base, boughtEN);
+        const exactTail = exactTotalCostMetaEN(layerIndex, 100, EN.add(boughtEN, EN.fromInt(base)));
+        return EN.add(lowerPart, exactTail);
+      }
+
+      // Estimate n by inverting integral upper (safe starting point)
       function estimateNFromCurrencyUpper(layerIndex, currencyEN, boughtEN) {
         if (currencyEN.isZero()) return 0;
         const { a } = LCONST[layerIndex];
         const ap1 = a + 1;
         const k1e = EN.add(boughtEN, EN.fromInt(3)).e;
-        // (k2^(a+1)) = (a+1)*C + k1^(a+1)
         const rhs = EN.add(EN.mul(currencyEN, EN.fromNumber(ap1)), EN.pow10((a+1)*k1e));
         const k2e = rhs.e / (a+1);
         const diff = k2e - k1e;
         if (diff <= 0) return 0;
-        // n ≈ k1 * (10^diff - 1); cap result for UI stability
+        if (diff > 15) return 1e15 | 0; // UI cap
+        const k1 = Math.pow(10, k1e);
+        const n = k1 * (Math.pow(10, diff) - 1);
+        return (isFinite(n) && n > 0) ? Math.floor(n) : 0;
+      }
+      function estimateNFromCurrencyUpperMeta(layerIndex, currencyEN, boughtEN) {
+        if (currencyEN.isZero()) return 0;
+        const { a } = MLCONST[layerIndex];
+        const ap1 = a + 1;
+        const k1e = EN.add(boughtEN, EN.fromInt(3)).e;
+        const rhs = EN.add(EN.mul(currencyEN, EN.fromNumber(ap1)), EN.pow10((a+1)*k1e));
+        const k2e = rhs.e / (a+1);
+        const diff = k2e - k1e;
+        if (diff <= 0) return 0;
         if (diff > 15) return 1e15 | 0;
         const k1 = Math.pow(10, k1e);
         const n = k1 * (Math.pow(10, diff) - 1);
-        if (!isFinite(n) || n < 0) return 0;
-        return Math.floor(n);
+        return (isFinite(n) && n > 0) ? Math.floor(n) : 0;
       }
 
-      // Currency available (spend integers)
-      function currencyEN(layerIndex) {
-        if (layerIndex === 0) return floorEN(game.points);
-        return floorEN(game.layers[layerIndex - 1].amount);
+      // Currency available
+      function currencyEN_forNormal(i) { return (i === 0) ? floorEN(game.points) : floorEN(game.layers[i-1].amount); }
+      function currencyEN_forMeta(i) { return (i === 0) ? floorEN(game.metaPoints) : floorEN(game.metaLayers[i-1].amount); }
+
+      // Multipliers:
+      // Normal per-purchase gain multiplier = (next normal + 1) * (respective meta + 1)
+      function normalPurchaseMultEN(i) {
+        const nextNorm = game.layers[i+1] ? floorEN(game.layers[i+1].amount) : EN.zero();
+        const metaSame = game.metaLayers[i] ? floorEN(game.metaLayers[i].amount) : EN.zero();
+        const n1 = EN.add(nextNorm, EN.one());
+        const m1 = EN.add(metaSame, EN.one());
+        return EN.mul(n1, m1);
       }
-      // Purchase gain multiplier = max(1, next.amount)
-      function purchaseGainMultiplierEN(layerIndex) {
-        const next = game.layers[layerIndex + 1];
-        if (!next) return EN.one();
-        const intNext = floorEN(next.amount);
-        return EN.lt(intNext, EN.one()) ? EN.one() : intNext;
+      // Meta per-purchase gain multiplier = (next meta + 1)
+      function metaPurchaseMultEN(i) {
+        const nextMeta = game.metaLayers[i+1] ? floorEN(game.metaLayers[i+1].amount) : EN.zero();
+        return EN.add(nextMeta, EN.one());
       }
-      // Points per second = max(1, alpha)
+      // PPS = (alpha + 1) * (alpha+ meta + 1)
       function pointsPerSecondEN() {
-        const alpha = floorEN(game.layers[0].amount);
-        return EN.lt(alpha, EN.one()) ? EN.one() : alpha;
+        const alphaInt = floorEN(game.layers[0].amount);
+        const metaAlphaInt = floorEN(game.metaLayers[0].amount);
+        return EN.mul(EN.add(alphaInt, EN.one()), EN.add(metaAlphaInt, EN.one()));
       }
-      // Level = sum n^(n^(1/3)) * ln(amount*10) over layers with amount>=1
+
+      // Level (3 sig figs display), using integer amounts
       const LN10 = Math.log(10);
       function computeLevelEN() {
         let total = EN.zero();
         for (let i = 0; i < game.layers.length; i++) {
           const amtInt = floorEN(game.layers[i].amount);
-          if (EN.lt(amtInt, EN.one())) continue;
+          if (amtInt.isZero()) continue;
           const n = i + 1;
           const factor = Math.pow(n, Math.pow(n, 1/3));
           const lnPart = (amtInt.e + 1) * LN10;
-          if (lnPart <= 0 || !isFinite(lnPart) || !isFinite(factor)) continue;
+          if (!(lnPart > 0) || !isFinite(factor)) continue;
           total = EN.add(total, EN.pow10(Math.log10(factor) + Math.log10(lnPart)));
         }
         return total;
       }
 
-      // ========= UI build =========
-      function buildUI() {
+      // Unlocks: unlock prestige/meta when Epsilon (index 4) amount >= 1
+      function unlockedMetaPrestige() {
+        return !floorEN(game.layers[4].amount).isZero();
+      }
+
+      // K for prestige: sum over normal layers with amount>=1 of (everOwned^layerNumber)
+      function computeK_EN() {
+        let K = EN.zero();
+        for (let i = 0; i < game.layers.length; i++) {
+          const ever = floorEN(game.layers[i].ever);
+          if (ever.isZero()) continue;
+          const n = i + 1;
+          // ever is EN => ever^n is EN.pow(ever, n)
+          K = EN.add(K, EN.pow(ever, n));
+        }
+        return K;
+      }
+
+      // ========= Build UI =========
+      function buildNormalUI() {
         layersEl.innerHTML = '';
         NAMES.forEach((name, i) => {
           const card = document.createElement('div');
@@ -448,134 +591,357 @@
           btn.className = 'button';
           btn.id = `buy-${i}`;
           btn.textContent = `Buy`;
-          btn.addEventListener('click', () => buy(i));
+          btn.addEventListener('click', () => buyNormal(i));
           buyRow.appendChild(cost);
           buyRow.appendChild(btn);
-          card.appendChild(buyRow);
 
+          card.appendChild(buyRow);
           layersEl.appendChild(card);
         });
       }
 
-      // ========= Lightweight, throttled UI updates =========
-      function updatePointsAndRateUI() {
-        pointsEl.textContent = formatEN(game.points);
-        rateEl.textContent = `(+${formatEN(pointsPerSecondEN())}/s)`;
+      function buildMetaUI() {
+        metaLayersEl.innerHTML = '';
+        NAMES.forEach((name, i) => {
+          const card = document.createElement('div');
+          card.className = 'card layer';
+          card.id = `mlayer-${i}`;
+
+          const head = document.createElement('div');
+          head.className = 'head';
+          const title = document.createElement('div');
+          title.className = 'name';
+          title.textContent = name + '+';
+          const amt = document.createElement('div');
+          amt.className = 'amount';
+          amt.id = `mamount-${i}`;
+          head.appendChild(title);
+          head.appendChild(amt);
+
+          const hint = document.createElement('div');
+          hint.className = 'hint';
+          hint.id = `mhint-${i}`;
+          card.appendChild(head);
+          card.appendChild(hint);
+
+          const buyRow = document.createElement('div');
+          buyRow.className = 'buy';
+          const cost = document.createElement('div');
+          cost.className = 'cost';
+          cost.id = `mcost-${i}`;
+          const btn = document.createElement('button');
+          btn.className = 'button';
+          btn.id = `mbuy-${i}`;
+          btn.textContent = `Buy`;
+          btn.addEventListener('click', () => buyMeta(i));
+          buyRow.appendChild(cost);
+          buyRow.appendChild(btn);
+
+          card.appendChild(buyRow);
+          metaLayersEl.appendChild(card);
+        });
       }
-      function updateLayerRow(i) {
-        const layer = game.layers[i];
+
+      // ========= Display (points/rate/meta/level) =========
+      function updateTopRowFast() {
+        // Smooth display: soft visual counter interpolates using PPS, clamped to actual
+        const actualEN = floorEN(game.points);
+        const actualNum = actualEN.toNumberSafe();
+        if (actualNum !== null) {
+          // Use soft visual only for safe-range; for huge values just print EN
+          const target = actualNum + game.residualPoints;
+          // Approach target without jitter; prevent going backward
+          if (game.softPointsVisual < target) {
+            // move 90% of the way to target each frame; ensures smoothness even if frames hiccup
+            const delta = (target - game.softPointsVisual) * 0.9;
+            game.softPointsVisual += Math.max(0.01, delta);
+            // clamp to just under next integer to avoid "0.99" illusions causing stalls
+            const cap = Math.min(target, Math.floor(target) + 0.999);
+            if (game.softPointsVisual > cap) game.softPointsVisual = cap;
+          } else {
+            game.softPointsVisual = target;
+          }
+          const disp = Math.floor(game.softPointsVisual);
+          pointsEl.textContent = disp.toLocaleString();
+        } else {
+          // Huge numbers: rely on EN formatter
+          pointsEl.textContent = formatEN(game.points);
+        }
+        rateEl.textContent = `(+${formatEN(pointsPerSecondEN())}/s)`;
+        metaPointsEl.textContent = formatEN(game.metaPoints);
+      }
+
+      // ========= Layer rows =========
+      function updateNormalRow(i, superficial = true) {
+        const L = game.layers[i];
         const amtEl = document.getElementById(`amount-${i}`);
         const costEl = document.getElementById(`cost-${i}`);
         const btnEl = document.getElementById(`buy-${i}`);
         const hintEl = document.getElementById(`hint-${i}`);
 
-        const mult = purchaseGainMultiplierEN(i);
-        const prevName = (i === 0) ? 'points' : game.layers[i - 1].name.toLowerCase();
+        amtEl.textContent = `Amount: ${formatEN(L.amount)}`;
+        const mult = normalPurchaseMultEN(i);
+        hintEl.textContent = `Each ${L.name.toLowerCase()} purchase is multiplied by ${(NAMES[i+1] || '1').toLowerCase()} and ${NAMES[i] + '+'} (x${formatEN(mult)}).`;
 
-        // Amount display (integer)
-        amtEl.textContent = `Amount: ${formatEN(layer.amount)}`;
-        hintEl.textContent = `Each ${layer.name.toLowerCase()} purchase is multiplied by ${NAMES[i + 1] ? NAMES[i + 1].toLowerCase() : '1'} (x${formatEN(mult)}).`;
-
-        const cur = currencyEN(i);
-        const b = layer.bought;
+        const cur = currencyEN_forNormal(i);
+        const b = L.bought;
 
         if (game.buyMode === 1 || game.buyMode === 10 || game.buyMode === 100) {
           const desired = game.buyMode;
-          // EXACT and cheap (<=100 terms)
           const totalCost = exactTotalCostEN(i, desired, b);
-          costEl.textContent = `Cost: ${formatEN(totalCost)} ${prevName}`;
+          costEl.textContent = `Cost: ${formatEN(totalCost)} ${(i===0?'points':NAMES[i-1].toLowerCase())}`;
           btnEl.textContent = `Buy ${formatEN(EN.fromInt(desired))}`;
-          btnEl.disabled = !EN.gte(cur, totalCost);
+          btnEl.disabled = !gteEps(cur, totalCost);
         } else {
-          // MAX mode: SUPERFICIAL every 0.2s
           const costOne = singleCostEN(i, b);
-          const canAffordOne = EN.gte(cur, costOne);
-
-          // Estimate n via upper integral (safe)
+          const canAffordOne = gteEps(cur, costOne);
           let nEst = estimateNFromCurrencyUpper(i, cur, b);
           if (nEst < 1 && canAffordOne) nEst = 1;
 
-          // Show U(nEst) as cost (superficial)
-          const shownCost = (nEst > 100)
-            ? integralUpperCostEN(i, nEst, b)
-            : (nEst > 0 ? exactTotalCostEN(i, nEst, b) : costOne);
+          let shownCost = EN.zero();
+          if (!superficial) {
+            shownCost = comboCostEN(i, nEst, b);
+          } else {
+            shownCost = (nEst > 100) ? integralUpperCostEN(i, nEst, b)
+                                     : exactTotalCostEN(i, nEst, b);
+          }
 
-          costEl.textContent = `Cost: ${formatEN(shownCost)} ${prevName}`;
+          costEl.textContent = `Cost: ${formatEN(shownCost)} ${(i===0?'points':NAMES[i-1].toLowerCase())}`;
           btnEl.textContent = `Buy ${formatEN(EN.fromInt(Math.max(1, nEst)))}`;
-          // Only disable if can't afford even 1
           btnEl.disabled = !canAffordOne;
         }
       }
-      function updateAllLayerRows() {
-        for (let i = 0; i < game.layers.length; i++) updateLayerRow(i);
-      }
 
-      // ========= Purchasing (exact <=100, integral upper for >100; no binary search) =========
-      function buy(layerIndex) {
-        const layer = game.layers[layerIndex];
-        const cur = currencyEN(layerIndex);
-        const b = layer.bought;
+      function updateMetaRow(i, superficial = true) {
+        const ML = game.metaLayers[i];
+        const amtEl = document.getElementById(`mamount-${i}`);
+        const costEl = document.getElementById(`mcost-${i}`);
+        const btnEl = document.getElementById(`mbuy-${i}`);
+        const hintEl = document.getElementById(`mhint-${i}`);
+
+        amtEl.textContent = `Amount: ${formatEN(ML.amount)}`;
+        const mult = metaPurchaseMultEN(i);
+        hintEl.textContent = `Each ${NAMES[i]+'+'} purchase is multiplied by ${(NAMES[i+1] ? NAMES[i+1]+'+' : '1')} (x${formatEN(mult)}). Also multiplies ${NAMES[i]} gains.`;
+
+        const cur = currencyEN_forMeta(i);
+        const b = ML.bought;
 
         if (game.buyMode === 1 || game.buyMode === 10 || game.buyMode === 100) {
           const desired = game.buyMode;
-          const totalCost = exactTotalCostEN(layerIndex, desired, b);
-          if (!EN.gte(cur, totalCost)) return; // exact only
-          performPurchase(layerIndex, desired, totalCost);
+          const totalCost = exactTotalCostMetaEN(i, desired, b);
+          costEl.textContent = `Cost: ${formatEN(totalCost)} ${(i===0?'meta points':(NAMES[i-1]+'+').toLowerCase())}`;
+          btnEl.textContent = `Buy ${formatEN(EN.fromInt(desired))}`;
+          btnEl.disabled = !gteEps(cur, totalCost);
+        } else {
+          const costOne = singleCostMetaEN(i, b);
+          const canAffordOne = gteEps(cur, costOne);
+          let nEst = estimateNFromCurrencyUpperMeta(i, cur, b);
+          if (nEst < 1 && canAffordOne) nEst = 1;
+
+          let shownCost = EN.zero();
+          if (!superficial) {
+            shownCost = comboCostMetaEN(i, nEst, b);
+          } else {
+            shownCost = (nEst > 100) ? integralUpperCostMetaEN(i, nEst, b)
+                                     : exactTotalCostMetaEN(i, nEst, b);
+          }
+
+          costEl.textContent = `Cost: ${formatEN(shownCost)} ${(i===0?'meta points':(NAMES[i-1]+'+').toLowerCase())}`;
+          btnEl.textContent = `Buy ${formatEN(EN.fromInt(Math.max(1, nEst)))}`;
+          btnEl.disabled = !canAffordOne;
+        }
+      }
+
+      function updateNormalList(superficial = true) {
+        for (let i = 0; i < game.layers.length; i++) updateNormalRow(i, superficial);
+      }
+      function updateMetaList(superficial = true) {
+        for (let i = 0; i < game.metaLayers.length; i++) updateMetaRow(i, superficial);
+      }
+
+      // ========= Purchasing =========
+      function buyNormal(i) {
+        const cur = currencyEN_forNormal(i);
+        const L = game.layers[i];
+        const b = L.bought;
+
+        if (game.buyMode === 1 || game.buyMode === 10 || game.buyMode === 100) {
+          const desired = game.buyMode;
+          const totalCost = exactTotalCostEN(i, desired, b);
+          if (!gteEps(cur, totalCost)) return;
+          performNormalPurchase(i, desired, totalCost);
           return;
         }
 
-        // Max mode:
-        // Step 1: estimate n via upper integral (safe)
-        let n = estimateNFromCurrencyUpper(layerIndex, cur, b);
+        // Max: estimate, safe spend
+        let n = estimateNFromCurrencyUpper(i, cur, b);
         if (n < 0) n = 0;
 
-        // Step 2: compute U(n) (safe upper bound of real sum)
-        let spentUpper = integralUpperCostEN(layerIndex, n, b);
-        // Ensure we never overspend: if U(n) > currency, reduce n quickly
-        // (rare due to flooring and estimation; adjust in chunks)
+        // Ensure U(n) <= currency (reduce quickly if needed)
+        let upper = integralUpperCostEN(i, n, b);
         let guard = 0;
-        while (EN.gt(spentUpper, cur) && n > 0 && guard < 10) {
+        while (!lteEps(upper, cur) && n > 0 && guard < 8) {
           n = Math.floor(n * 0.8);
-          spentUpper = integralUpperCostEN(layerIndex, n, b);
+          upper = integralUpperCostEN(i, n, b);
           guard++;
         }
 
-        // Step 3: exact top-off up to +100 (still safe using U(n)+nextCost <= currency)
-        let extra = 0;
-        for (; extra < 100; extra++) {
-          const nextCost = singleCostEN(layerIndex, EN.add(b, EN.fromInt(n + extra)));
-          const trial = EN.add(spentUpper, nextCost);
-          if (EN.lte(trial, cur)) spentUpper = trial; else break;
+        let spend = comboCostEN(i, n, b);
+        if (!lteEps(spend, cur)) {
+          guard = 0;
+          while (!lteEps(spend, cur) && n > 0 && guard < 8) {
+            n = Math.floor(n * 0.9);
+            spend = comboCostEN(i, n, b);
+            guard++;
+          }
         }
-        const totalToBuy = n + extra;
-        if (totalToBuy <= 0) return;
 
-        performPurchase(layerIndex, totalToBuy, spentUpper);
+        // Top-off exact up to +100
+        let extra = 0;
+        while (extra < 100) {
+          const nextCost = singleCostEN(i, EN.add(b, EN.fromInt(n + extra)));
+          const trial = EN.add(spend, nextCost);
+          if (lteEps(trial, cur)) { spend = trial; extra++; } else break;
+        }
+        const totalN = n + extra;
+        if (totalN <= 0) return;
+        performNormalPurchase(i, totalN, spend);
       }
-      function performPurchase(layerIndex, countInt, totalCostEN) {
-        // Deduct
-        if (layerIndex === 0) {
+
+      function performNormalPurchase(i, countInt, totalCostEN) {
+        // Deduct currency
+        if (i === 0) {
+          if (!gteEps(game.points, totalCostEN)) return;
           game.points = EN.sub(game.points, totalCostEN);
         } else {
-          const prev = game.layers[layerIndex - 1];
+          const prev = game.layers[i-1];
+          if (!gteEps(prev.amount, totalCostEN)) return;
           prev.amount = EN.sub(prev.amount, totalCostEN);
         }
 
-        // Apply gains (integers): bought += count, amount += count * multiplier
-        const layer = game.layers[layerIndex];
-        const mult = purchaseGainMultiplierEN(layerIndex);
-        layer.bought = EN.add(layer.bought, EN.fromInt(countInt));
-        layer.amount = EN.add(layer.amount, EN.mul(EN.fromInt(countInt), mult));
+        // Gains
+        const L = game.layers[i];
+        const mult = normalPurchaseMultEN(i); // (next+1)*(metaSame+1)
+        const gain = EN.mul(EN.fromInt(countInt), mult);
+        L.bought = EN.add(L.bought, EN.fromInt(countInt));
+        L.amount = EN.add(L.amount, gain);
+        L.ever = EN.add(L.ever, gain); // track ever-owned since last prestige
 
-        // Immediate UI refresh for affected rows
-        updateLayerRow(layerIndex);
-        if (layerIndex > 0) updateLayerRow(layerIndex - 1);
-        if (layerIndex + 1 < game.layers.length) updateLayerRow(layerIndex + 1);
-        if (layerIndex === 0) updatePointsAndRateUI();
-        // Level may change
+        // Refresh adjacent rows
+        updateNormalRow(i, false);
+        if (i > 0) updateNormalRow(i-1, false);
+        if (i + 1 < game.layers.length) updateNormalRow(i+1, false);
+        if (i === 0) updateTopRowFast();
         levelEl.textContent = formatLevelEN(computeLevelEN());
         saveToCookieThrottled();
       }
+
+      function buyMeta(i) {
+        const cur = currencyEN_forMeta(i);
+        const ML = game.metaLayers[i];
+        const b = ML.bought;
+
+        if (game.buyMode === 1 || game.buyMode === 10 || game.buyMode === 100) {
+          const desired = game.buyMode;
+          const totalCost = exactTotalCostMetaEN(i, desired, b);
+          if (!gteEps(cur, totalCost)) return;
+          performMetaPurchase(i, desired, totalCost);
+          return;
+        }
+
+        let n = estimateNFromCurrencyUpperMeta(i, cur, b);
+        if (n < 0) n = 0;
+
+        let upper = integralUpperCostMetaEN(i, n, b);
+        let guard = 0;
+        while (!lteEps(upper, cur) && n > 0 && guard < 8) {
+          n = Math.floor(n * 0.8);
+          upper = integralUpperCostMetaEN(i, n, b);
+          guard++;
+        }
+
+        let spend = comboCostMetaEN(i, n, b);
+        if (!lteEps(spend, cur)) {
+          guard = 0;
+          while (!lteEps(spend, cur) && n > 0 && guard < 8) {
+            n = Math.floor(n * 0.9);
+            spend = comboCostMetaEN(i, n, b);
+            guard++;
+          }
+        }
+
+        let extra = 0;
+        while (extra < 100) {
+          const nextCost = singleCostMetaEN(i, EN.add(b, EN.fromInt(n + extra)));
+          const trial = EN.add(spend, nextCost);
+          if (lteEps(trial, cur)) { spend = trial; extra++; } else break;
+        }
+        const totalN = n + extra;
+        if (totalN <= 0) return;
+        performMetaPurchase(i, totalN, spend);
+      }
+
+      function performMetaPurchase(i, countInt, totalCostEN) {
+        // Deduct meta currency
+        if (i === 0) {
+          if (!gteEps(game.metaPoints, totalCostEN)) return;
+          game.metaPoints = EN.sub(game.metaPoints, totalCostEN);
+        } else {
+          const prev = game.metaLayers[i-1];
+          if (!gteEps(prev.amount, totalCostEN)) return;
+          prev.amount = EN.sub(prev.amount, totalCostEN);
+        }
+
+        // Gains
+        const ML = game.metaLayers[i];
+        const mult = metaPurchaseMultEN(i); // (nextMeta+1)
+        const gain = EN.mul(EN.fromInt(countInt), mult);
+        ML.bought = EN.add(ML.bought, EN.fromInt(countInt));
+        ML.amount = EN.add(ML.amount, gain);
+
+        // Refresh adjacent rows and normal rows impacted (same index multiplier)
+        updateMetaRow(i, false);
+        if (i > 0) updateMetaRow(i-1, false);
+        if (i + 1 < game.metaLayers.length) updateMetaRow(i+1, false);
+        updateNormalRow(i, false); // normal i multiplier changed
+        if (i === 0) updateTopRowFast();
+        levelEl.textContent = formatLevelEN(computeLevelEN());
+        saveToCookieThrottled();
+      }
+
+      // ========= Prestige =========
+      function updatePrestigeUI() {
+        const K = computeK_EN();
+        const reward = EN.div(EN.pow(K, 0.5), EN.fromInt(1000));
+        prestigeInfoEl.innerHTML = `K: ${formatEN(K)} &nbsp;→&nbsp; Gain on prestige: ${formatEN(reward)} meta points`;
+        prestigeBtn.disabled = K.isZero(); // enable only if K > 0
+      }
+
+      function doPrestige() {
+        const K = computeK_EN();
+        if (K.isZero()) return;
+        const reward = EN.div(EN.pow(K, 0.5), EN.fromInt(1000));
+        game.metaPoints = EN.add(game.metaPoints, reward);
+
+        // Reset normals
+        game.points = EN.zero();
+        game.residualPoints = 0;
+        for (let i = 0; i < game.layers.length; i++) {
+          game.layers[i].amount = EN.zero();
+          game.layers[i].bought = EN.zero();
+          game.layers[i].ever = EN.zero();
+        }
+
+        // Update UI
+        updateTopRowFast();
+        updateNormalList(false);
+        updateMetaList(false);
+        updatePrestigeUI();
+        levelEl.textContent = formatLevelEN(computeLevelEN());
+        saveToCookieThrottled();
+      }
+
+      prestigeBtn.addEventListener('click', doPrestige);
 
       // ========= Controls =========
       controlsEl.addEventListener('click', (e) => {
@@ -587,13 +953,67 @@
         controlsEl.querySelectorAll('.control-button').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
 
-        // Refresh costs/buttons once; heavy stuff is throttled elsewhere
-        updateAllLayerRows();
+        // Refresh visible list once
+        if (currentTab === 'layers') updateNormalList();
+        else if (currentTab === 'meta') updateMetaList();
+        updatePrestigeUI();
         saveToCookieThrottled();
       });
 
+      // Tabs
+      let currentTab = 'layers';
+      function refreshTabLocks() {
+        const unlocked = unlockedMetaPrestige();
+        const prestigeTab = [...tabsEl.children].find(t => t.getAttribute('data-tab') === 'prestige');
+        const metaTab = [...tabsEl.children].find(t => t.getAttribute('data-tab') === 'meta');
+
+        if (unlocked) {
+          prestigeTab.classList.remove('disabled');
+          metaTab.classList.remove('disabled');
+        } else {
+          prestigeTab.classList.add('disabled');
+          metaTab.classList.add('disabled');
+          // If user is on a locked tab, bounce back to Layers
+          if (currentTab !== 'layers') switchTab('layers');
+        }
+      }
+
+      function switchTab(which) {
+        currentTab = which;
+        tabsEl.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+        const tabBtn = [...tabsEl.children].find(t => t.getAttribute('data-tab') === which);
+        if (tabBtn) tabBtn.classList.add('active');
+
+        if (which === 'layers') {
+          layersTabEl.style.display = '';
+          prestigeTabEl.style.display = 'none';
+          metaTabEl.style.display = 'none';
+        } else if (which === 'prestige') {
+          layersTabEl.style.display = 'none';
+          prestigeTabEl.style.display = '';
+          metaTabEl.style.display = 'none';
+        } else {
+          layersTabEl.style.display = 'none';
+          prestigeTabEl.style.display = 'none';
+          metaTabEl.style.display = '';
+        }
+      }
+
+      tabsEl.addEventListener('click', (e) => {
+        const t = e.target.closest('.tab');
+        if (!t) return;
+        const dest = t.getAttribute('data-tab');
+        // prevent switching into locked tabs
+        if ((dest === 'prestige' || dest === 'meta') && t.classList.contains('disabled')) return;
+        switchTab(dest);
+        // On entering a tab, refresh it
+        if (dest === 'layers') updateNormalList();
+        if (dest === 'prestige') updatePrestigeUI();
+        if (dest === 'meta') updateMetaList();
+      });
+
       // ========= Saving with cookies =========
-      const COOKIE_NAME = 'greek_incremental_save';
+      const COOKIE_NAME = 'greek_incremental_save_v3';
       const COOKIE_DAYS = 365;
 
       function setCookie(name, value, days) {
@@ -614,8 +1034,10 @@
       function saveToCookie() {
         const payload = {
           p: game.points.e,
+          mp: game.metaPoints.e,
           m: game.buyMode,
-          l: game.layers.map(L => [L.amount.e, L.bought.e])
+          l: game.layers.map(L => [L.amount.e, L.bought.e, L.ever.e]),
+          ml: game.metaLayers.map(L => [L.amount.e, L.bought.e]),
         };
         try { setCookie(COOKIE_NAME, JSON.stringify(payload), COOKIE_DAYS); } catch {}
       }
@@ -630,18 +1052,24 @@
         try {
           const data = JSON.parse(raw);
           if (typeof data.p === 'number') game.points = EN.pow10(data.p);
+          if (typeof data.mp === 'number') game.metaPoints = EN.pow10(data.mp);
           if (data.m === 'max' || data.m === 1 || data.m === 10 || data.m === 100) game.buyMode = data.m;
           if (Array.isArray(data.l) && data.l.length === game.layers.length) {
             for (let i = 0; i < game.layers.length; i++) {
-              const pair = data.l[i];
-              if (Array.isArray(pair) && pair.length === 2) {
-                const [amtE, boughtE] = pair;
-                if (typeof amtE === 'number') game.layers[i].amount = EN.pow10(amtE);
-                if (typeof boughtE === 'number') game.layers[i].bought = EN.pow10(boughtE);
-              }
+              const [amtE, boughtE, everE] = data.l[i] || [];
+              if (typeof amtE === 'number') game.layers[i].amount = EN.pow10(amtE);
+              if (typeof boughtE === 'number') game.layers[i].bought = EN.pow10(boughtE);
+              if (typeof everE === 'number') game.layers[i].ever = EN.pow10(everE);
             }
           }
-          // Reflect active button on load
+          if (Array.isArray(data.ml) && data.ml.length === game.metaLayers.length) {
+            for (let i = 0; i < game.metaLayers.length; i++) {
+              const [amtE, boughtE] = data.ml[i] || [];
+              if (typeof amtE === 'number') game.metaLayers[i].amount = EN.pow10(amtE);
+              if (typeof boughtE === 'number') game.metaLayers[i].bought = EN.pow10(boughtE);
+            }
+          }
+          // Reflect active buy button
           controlsEl.querySelectorAll('.control-button').forEach(b => {
             const mode = b.getAttribute('data-buy');
             const m = (mode === 'max') ? 'max' : parseInt(mode,10);
@@ -651,13 +1079,14 @@
       }
       window.addEventListener('beforeunload', saveToCookie);
 
-      // ========= Game loop (buttery-smooth; no heavy work here) =========
+      // ========= Game loops =========
+      // Animation frame: ONLY generate points and update the top row (super light).
       let last = performance.now();
       function frame(now) {
-        const dt = Math.max(0, Math.min(0.25, (now - last) / 1000)); // clamp dt
+        const dt = Math.max(0, Math.min(0.2, (now - last) / 1000)); // clamp dt
         last = now;
 
-        // Produce points as integers (accumulate fractional gains)
+        // Generate points with integer-external behavior, using residual carry
         const pps = pointsPerSecondEN();
         const gainEN = EN.mul(pps, EN.fromNumber(dt));
         if (gainEN.e < 0) {
@@ -669,34 +1098,46 @@
             game.points = EN.add(game.points, EN.fromInt(k));
           }
         } else {
+          // Large enough per-frame gain: we still add full integer chunk to avoid falling behind
           const whole = floorEN(gainEN);
           if (!whole.isZero()) game.points = EN.add(game.points, whole);
         }
 
-        // Only cheap UI here (points + rate)
-        updatePointsAndRateUI();
+        // Smooth top row to avoid "freezing" visuals
+        updateTopRowFast();
+
+        // Occasionally refresh tab locks (cheap)
+        refreshTabLocks();
 
         requestAnimationFrame(frame);
       }
 
-      // Throttled UI: "superficial" buy preview every 200ms
+      // Superficial per-list updates every 200ms (only active tab)
       setInterval(() => {
-        // lightweight per-layer update (no binary search; integral-only for >100)
-        updateAllLayerRows();
+        if (currentTab === 'layers') updateNormalList(true);
+        else if (currentTab === 'meta') updateMetaList(true);
       }, 200);
 
-      // Level updates (can be a bit heavier); keep at 400ms
+      // Level/prestige info updates less often
       setInterval(() => {
         levelEl.textContent = formatLevelEN(computeLevelEN());
+        if (currentTab === 'prestige') updatePrestigeUI();
       }, 400);
 
       // ========= Init =========
-      buildUI();
-      loadFromCookie();
-      updatePointsAndRateUI();
-      updateAllLayerRows();
-      levelEl.textContent = formatLevelEN(computeLevelEN());
-      requestAnimationFrame(frame);
+      function init() {
+        buildNormalUI();
+        buildMetaUI();
+        loadFromCookie();
+        updateTopRowFast();
+        updateNormalList(true);
+        updateMetaList(true);
+        updatePrestigeUI();
+        levelEl.textContent = formatLevelEN(computeLevelEN());
+        refreshTabLocks();
+        requestAnimationFrame(frame);
+      }
+      init();
     })();
   </script>
 </body>
